@@ -15,6 +15,14 @@ export default function Recommendations() {
     fetchGifts()
     fetchInventory()
     fetchContacts()
+
+    const intervalId = setInterval(() => {
+      fetchGifts()
+      fetchInventory()
+      fetchContacts()
+    }, 30000) // 每30秒刷新一次
+
+    return () => clearInterval(intervalId)
   }, [fetchGifts, fetchInventory, fetchContacts])
 
   const pendingGifts = gifts.filter((g) => g.status === "待回礼")
@@ -398,7 +406,7 @@ export default function Recommendations() {
                         {recommendations.map((item) => (
                           <div
                             key={item.id}
-                            className="group p-6 rounded-2xl border-2 border-[#D4AF37]/30 bg-white hover:border-[#D4AF37] transition-all hover:shadow-[0_8px_30px_rgba(212,175,55,0.15)] relative"
+                            className="group p-6 rounded-2xl border-2 border-[#D4AF37]/30 bg-white hover:border-[#D4AF37] transition-all hover:shadow-[0_8px_50px_rgba(212,175,55,0.15)] relative"
                           >
                             <div className="absolute top-4 right-4">
                               <div className="px-2 py-1 bg-gradient-to-r from-[#B8323F] to-[#8B0000] text-white text-xs rounded-full font-semibold">

@@ -7,8 +7,16 @@ import { useSupabaseStore } from "@/lib/supabase-store"
 
 export default function ReceivedGifts() {
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const { gifts, addGift, deleteGift, deleteGifts, updateGift, addInventory, fetchGifts, fetchContacts } =
-    useSupabaseStore()
+  const gifts = useSupabaseStore((state) => state.gifts)
+  const addGift = useSupabaseStore((state) => state.addGift)
+  const deleteGift = useSupabaseStore((state) => state.deleteGift)
+  const deleteGifts = useSupabaseStore((state) => state.deleteGifts)
+  const updateGift = useSupabaseStore((state) => state.updateGift)
+  const addInventory = useSupabaseStore((state) => state.addInventory)
+  const fetchGifts = useSupabaseStore((state) => state.fetchGifts)
+  const fetchContacts = useSupabaseStore((state) => state.fetchContacts)
+  const fetchInventory = useSupabaseStore((state) => state.fetchInventory)
+
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingGift, setEditingGift] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -33,13 +41,11 @@ export default function ReceivedGifts() {
 
   const handleSave = async (data: any) => {
     if (isSubmitting) {
-      console.log("[v0] 正在提交中，忽略重复点击")
       return
     }
 
     try {
       setIsSubmitting(true)
-      console.log("[v0] 接收到的表单数据:", data)
 
       const giftData = {
         from_person: data.from,
@@ -52,15 +58,18 @@ export default function ReceivedGifts() {
         photos: data.photos || [],
       }
 
-      console.log("[v0] 转换后的礼物数据:", giftData)
-
       if (editingId) {
         await updateGift(editingId, giftData)
+
+        // 等待状态更新传播到组件
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        // 关闭对话框
+        setIsFormOpen(false)
         setEditingId(null)
         setEditingGift(null)
       } else {
         const giftId = await addGift(giftData, data.items)
-        console.log("[v0] 礼物已添加，ID:", giftId)
 
         for (const item of data.items) {
           await addInventory({
@@ -73,9 +82,8 @@ export default function ReceivedGifts() {
             gift_id: giftId,
           })
         }
-        console.log("[v0] 库存已添加")
+        setIsFormOpen(false)
       }
-      setIsFormOpen(false)
     } catch (error) {
       console.error("[v0] 保存礼物失败:", error)
       alert("保存失败，请检查网络连接或重试")

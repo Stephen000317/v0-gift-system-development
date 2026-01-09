@@ -263,13 +263,59 @@ export const useSupabaseStore = create<SupabaseStore>((set, get) => ({
   },
 
   updateGift: async (id, gift) => {
+    console.log("[v0] 更新礼物:", id, gift)
     const supabase = createClient()
-    const { data, error } = await supabase.from("gifts").update(gift).eq("id", id).select().single()
 
-    if (!error && data) {
-      set({
-        gifts: get().gifts.map((g) => (g.id === id ? data : g)),
-      })
+    // 更新礼物数据
+    const { error } = await supabase.from("gifts").update(gift).eq("id", id)
+
+    if (error) {
+      console.error("[v0] 更新礼物失败:", error)
+      throw error
+    }
+
+    console.log("[v0] 更新成功，重新获取完整数据...")
+    const { data, error: fetchError } = await supabase
+      .from("gifts")
+      .select("*, gift_items(*), reply_items(*)")
+      .order("received_date", { ascending: false })
+
+    if (!fetchError && data) {
+      const gifts = data.map((gift: any) => ({
+        ...gift,
+        estimated_value: Number(gift.estimated_value) || 0,
+        reply_cost: gift.reply_cost ? Number(gift.reply_cost) : undefined,
+        items:
+          gift.gift_items?.map((item: any) => ({
+            id: item.id,
+            gift_id: item.gift_id,
+            item_name: item.item_name,
+            quantity: Number(item.quantity) || 0,
+            unit_price: Number(item.unit_price) || 0,
+            subtotal: Number(item.subtotal) || 0,
+            category: item.category || "其他",
+          })) || [],
+        reply_items:
+          gift.reply_items?.map((item: any) => ({
+            id: item.id,
+            gift_id: item.gift_id,
+            item_name: item.item_name,
+            category: item.category,
+            quantity: Number(item.quantity) || 0,
+            unit_price: Number(item.unit_price) || 0,
+            subtotal: Number(item.subtotal) || 0,
+            inventory_id: item.inventory_id,
+          })) || [],
+        photos: gift.photos || [],
+      }))
+
+      // 强制更新状态，确保界面刷新
+      set({ gifts: gifts as Gift[], loading: false })
+      console.log("[v0] 状态已更新，新的礼物列表数量:", gifts.length)
+      console.log(
+        "[v0] 更新后的礼物:",
+        gifts.find((g: any) => g.id === id),
+      )
     }
   },
 

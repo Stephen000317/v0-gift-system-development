@@ -28,6 +28,13 @@ export default function GiftReplyPage() {
   useEffect(() => {
     fetchGifts()
     fetchInventory()
+
+    const intervalId = setInterval(() => {
+      fetchGifts()
+      fetchInventory()
+    }, 30000) // 每30秒刷新一次
+
+    return () => clearInterval(intervalId)
   }, [fetchGifts, fetchInventory])
 
   const pendingGifts = gifts.filter((g) => g.status === "待回礼")

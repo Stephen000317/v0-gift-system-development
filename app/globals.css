@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 :root {
   /* 中国红金配色方案 - 高端商务礼物系统 */
   --background: oklch(0.982 0.006 48); /* 宣纸白/米黄 #FAF7F0 */

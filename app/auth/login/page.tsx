@@ -19,10 +19,13 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient()
-    // 清除所有旧的会话数据，确保用户可以重新登录
-    supabase.auth.signOut({ scope: "local" }).catch(() => {
-      // 忽略错误，因为可能根本没有会话
+    // 直接清除所有 Supabase 相关的 cookie，避免触发 API 调用
+    const cookiesToClear = ["sb-ygtmzrtfalopnbrtxwqi-auth-token", "sb-access-token", "sb-refresh-token"]
+
+    cookiesToClear.forEach((name) => {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
+      document.cookie = `${name}.0=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
+      document.cookie = `${name}.1=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
     })
   }, [])
 
