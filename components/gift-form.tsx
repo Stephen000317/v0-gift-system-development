@@ -40,7 +40,20 @@ export default function GiftForm({ onClose, onSubmit, initialData, isSubmitting 
         date: initialData.received_date.split("T")[0],
         notes: initialData.notes || "",
       })
-      setItems(initialData.items || [{ item_name: "", quantity: 1, unit_price: 0, category: "其他" }])
+      
+      // 数据库中字段名是 gift_items，需要转换为表单使用的格式
+      const giftItems = initialData.gift_items || initialData.items || []
+      if (giftItems.length > 0) {
+        setItems(giftItems.map((item: any) => ({
+          item_name: item.item_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          category: item.category || "其他",
+        })))
+      } else {
+        setItems([{ item_name: "", quantity: 1, unit_price: 0, category: "其他" }])
+      }
+      
       setPhotos(initialData.photos || [])
     }
   }, [initialData])

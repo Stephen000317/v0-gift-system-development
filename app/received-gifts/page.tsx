@@ -47,22 +47,44 @@ export default function ReceivedGifts() {
     try {
       setIsSubmitting(true)
 
+      // 计算物品总价值
+      const totalValue = data.items.reduce((sum: number, item: any) => sum + item.quantity * item.unit_price, 0)
+
       const giftData = {
         from_person: data.from,
         from_company: data.company || "",
         gift_name: data.items.map((item: any) => item.item_name).join("、"),
         category: data.items[0]?.category || "其他",
+        estimated_value: totalValue,
         received_date: data.date,
         notes: data.notes || "",
-        status: "待回礼" as const,
         photos: data.photos || [],
       }
 
       if (editingId) {
+        // 更新礼物基本信息
         await updateGift(editingId, giftData)
 
-        // 等待状态更新传播到组件
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        // 更新物品清单：先删除旧的，再插入新的
+        const supabase = (await import("@/lib/supabase/client")).createClient()
+        
+        // 删除旧的物品清单
+        await supabase.from("gift_items").delete().eq("gift_id", editingId)
+        
+        // 插入新的物品清单（subtotal是自动生成列，不需要手动插入）
+        const itemsWithGiftId = data.items.map((item: any) => ({
+          gift_id: editingId,
+          item_name: item.item_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          category: item.category,
+        }))
+        
+        await supabase.from("gift_items").insert(itemsWithGiftId)
+
+        // 重新获取数据以刷新界面
+        await fetchGifts()
+        await fetchInventory()
 
         // 关闭对话框
         setIsFormOpen(false)
@@ -360,9 +382,9 @@ export default function ReceivedGifts() {
                           {gift.category}
                         </span>
                       </div>
-                      {gift.items && gift.items.length > 0 && (
+                      {gift.gift_items && gift.gift_items.length > 0 && (
                         <div className="mb-6 space-y-2">
-                          {gift.items.map((item) => (
+                          {gift.gift_items.map((item: any) => (
                             <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                               <div className="flex items-center gap-3">
                                 <span className="text-xs px-2 py-1 rounded-md bg-white border border-gray-200 text-gray-600">

@@ -550,6 +550,38 @@ export const useSupabaseStore = create<SupabaseStore>((set, get) => ({
     }
   },
 
+  updateOutgoingGift: async (id, gift, items) => {
+    const supabase = createClient()
+    
+    const totalCost = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
+    const giftWithTotal = { ...gift, total_cost: totalCost }
+    
+    const { error } = await supabase.from("outgoing_gifts").update(giftWithTotal).eq("id", id)
+    
+    if (error) {
+      console.error("[v0] 更新主动送礼错误:", error)
+      throw error
+    }
+    
+    // 删除旧的物品清单
+    await supabase.from("outgoing_gift_items").delete().eq("gift_id", id)
+    
+    // 插入新的物品清单
+    const itemsWithGiftId = items.map((item) => ({
+      gift_id: id,
+      item_name: item.item_name,
+      category: item.category,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      inventory_id: item.inventory_id,
+    }))
+    
+    await supabase.from("outgoing_gift_items").insert(itemsWithGiftId)
+    
+    // 重新获取数据
+    await get().fetchOutgoingGifts()
+  },
+
   deleteOutgoingGift: async (id) => {
     const supabase = createClient()
 

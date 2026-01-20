@@ -2,63 +2,117 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
+import { createBrowserClient } from "@supabase/ssr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Gift } from "lucide-react"
+
+// 清除所有 Supabase 相关数据的函数
+function clearAllSupabaseData() {
+  // 清除所有 cookie
+  const allCookies = document.cookie.split(";")
+  allCookies.forEach((cookie) => {
+    const cookieName = cookie.split("=")[0].trim()
+    if (cookieName) {
+      document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+      document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=${window.location.hostname}`
+    }
+  })
+  
+  // 清除所有 localStorage
+  try {
+    localStorage.clear()
+  } catch (e) {
+    // 忽略错误
+  }
+  
+  // 清除所有 sessionStorage
+  try {
+    sessionStorage.clear()
+  } catch (e) {
+    // 忽略错误
+  }
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    // 直接清除所有 Supabase 相关的 cookie，避免触发 API 调用
-    const cookiesToClear = ["sb-ygtmzrtfalopnbrtxwqi-auth-token", "sb-access-token", "sb-refresh-token"]
-
-    cookiesToClear.forEach((name) => {
-      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
-      document.cookie = `${name}.0=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
-      document.cookie = `${name}.1=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
-    })
+    // 页面加载时清除所有数据
+    clearAllSupabaseData()
+    // 等待一小段时间确保清除完成
+    setTimeout(() => setIsReady(true), 100)
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      console.log("[v0] 开始登录流程")
+      // 清除旧数据
+      clearAllSupabaseData()
+      
+      // 创建全新的 Supabase 客户端
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      
+      // 执行登录
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
-        console.log("[v0] 登录失败:", error)
+        // 处理常见错误
         if (error.message === "Invalid login credentials") {
           throw new Error("邮箱或密码不正确")
+        }
+        if (error.message.includes("Failed to fetch")) {
+          throw new Error("无法连接到服务器，请检查网络或稍后重试")
         }
         throw error
       }
 
-      console.log("[v0] 登录成功，准备跳转")
+      if (!data.user) {
+        throw new Error("登录失败，请重试")
+      }
 
-      // 使用 replace 而不是 href，避免在历史记录中保留登录页
+      // 登录成功，跳转到首页
       window.location.replace("/")
     } catch (error: unknown) {
-      console.log("[v0] 登录错误:", error)
-      setError(error instanceof Error ? error.message : "登录失败")
+      const message = error instanceof Error ? error.message : "登录失败，请重试"
+      setError(message)
       setIsLoading(false)
     }
+  }
+  
+  if (!isReady) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "linear-gradient(135deg, #FAF7F0 0%, #F5E6D3 100%)" }}
+      >
+        <div className="text-center">
+          <div
+            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 animate-pulse"
+            style={{ background: "linear-gradient(135deg, #B8323F 0%, #8B0000 100%)" }}
+          >
+            <Gift className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-gray-600">正在初始化...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

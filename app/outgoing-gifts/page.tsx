@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Plus, Trash2, Send, Search, X } from "lucide-react"
+import { Plus, Trash2, Send, Search, X, Pencil } from "lucide-react"
 import { useSupabaseStore } from "@/lib/supabase-store"
 import { PhotoUpload } from "@/components/photo-upload"
 import { CATEGORY_OPTIONS } from "@/lib/constants"
@@ -15,7 +15,8 @@ export default function OutgoingGifts() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [photos, setPhotos] = useState<string[]>([])
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null)
-  const { outgoingGifts, inventory, fetchOutgoingGifts, fetchInventory, addOutgoingGift, deleteOutgoingGift } =
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const { outgoingGifts, inventory, fetchOutgoingGifts, fetchInventory, addOutgoingGift, updateOutgoingGift, deleteOutgoingGift } =
     useSupabaseStore()
 
   const [formData, setFormData] = useState({
@@ -73,17 +74,49 @@ export default function OutgoingGifts() {
 
     try {
       setIsSubmitting(true)
-      await addOutgoingGift({ ...formData, photos }, items)
+      
+      const validItems = items.map(item => ({
+        ...item,
+        quantity: typeof item.quantity === "string" ? 0 : item.quantity,
+        unit_price: typeof item.unit_price === "string" ? 0 : item.unit_price,
+      }))
+      
+      if (editingId) {
+        await updateOutgoingGift(editingId, { ...formData, photos }, validItems)
+        setEditingId(null)
+      } else {
+        await addOutgoingGift({ ...formData, photos }, validItems)
+      }
+      
       setIsFormOpen(false)
       setFormData({ to_person: "", to_company: "", send_date: new Date().toISOString().split("T")[0], notes: "" })
       setItems([{ item_name: "", category: "其他", quantity: "", unit_price: "", inventory_id: undefined }])
       setPhotos([])
     } catch (error) {
-      console.error("添加主动送礼失败:", error)
+      console.error("保存主动送礼失败:", error)
       alert("保存失败，请重试")
     } finally {
       setIsSubmitting(false)
     }
+  }
+  
+  const handleEdit = (gift: any) => {
+    setEditingId(gift.id)
+    setFormData({
+      to_person: gift.to_person,
+      to_company: gift.to_company || "",
+      send_date: gift.send_date.split("T")[0],
+      notes: gift.notes || "",
+    })
+    setItems(gift.items?.map((item: any) => ({
+      item_name: item.item_name,
+      category: item.category,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      inventory_id: item.inventory_id,
+    })) || [{ item_name: "", category: "其他", quantity: "", unit_price: "", inventory_id: undefined }])
+    setPhotos(gift.photos || [])
+    setIsFormOpen(true)
   }
 
   const totalCost = items.reduce((sum, item) => {
@@ -154,9 +187,15 @@ export default function OutgoingGifts() {
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">添加送礼记录</h2>
+                <h2 className="text-2xl font-semibold text-gray-900">{editingId ? "编辑送礼记录" : "添加送礼记录"}</h2>
                 <button
-                  onClick={() => setIsFormOpen(false)}
+                  onClick={() => {
+                    setIsFormOpen(false)
+                    setEditingId(null)
+                    setFormData({ to_person: "", to_company: "", send_date: new Date().toISOString().split("T")[0], notes: "" })
+                    setItems([{ item_name: "", category: "其他", quantity: "", unit_price: "", inventory_id: undefined }])
+                    setPhotos([])
+                  }}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-all text-gray-400 hover:text-red-500"
                 >
                   <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,6 +459,12 @@ export default function OutgoingGifts() {
                     )}
                   </div>
                   <div className="flex gap-2 ml-6">
+                    <button
+                      onClick={() => handleEdit(gift)}
+                      className="p-2.5 hover:bg-blue-50 rounded-xl transition-all text-gray-400 hover:text-blue-500"
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
                     <button
                       onClick={() => deleteOutgoingGift(gift.id)}
                       className="p-2.5 hover:bg-red-50 rounded-xl transition-all text-gray-400 hover:text-red-500"
