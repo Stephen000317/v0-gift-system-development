@@ -61,6 +61,10 @@ export default function OutgoingGifts() {
           category: selectedItem.category,
           unit_price: selectedItem.price,
         }
+        // 自动继承库存物品的照片
+        if (selectedItem.photos && selectedItem.photos.length > 0 && photos.length === 0) {
+          setPhotos(selectedItem.photos)
+        }
       }
     } else {
       newItems[index] = { ...newItems[index], [field]: value }
