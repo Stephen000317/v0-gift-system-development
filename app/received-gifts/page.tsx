@@ -58,7 +58,7 @@ export default function ReceivedGifts() {
         estimated_value: totalValue,
         received_date: data.date,
         notes: data.notes || "",
-        status: "待回礼" as const,
+        status: data.status || "待回礼",
         photos: data.photos || [],
       }
 
@@ -440,13 +440,21 @@ export default function ReceivedGifts() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wide">状态</p>
-                          <span
-                            className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${
-                              gift.status === "待回礼" ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600"
+                          <select
+                            value={gift.status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value
+                              await updateGift(gift.id, { status: newStatus })
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                              gift.status === "待回礼"
+                                ? "bg-orange-100 text-orange-600 focus:ring-orange-400"
+                                : "bg-green-100 text-green-600 focus:ring-green-400"
                             }`}
                           >
-                            {gift.status === "待回礼" ? "待回礼" : "已回礼"}
-                          </span>
+                            <option value="待回礼">待回礼</option>
+                            <option value="已回礼">已回礼</option>
+                          </select>
                         </div>
                       </div>
                     </div>
