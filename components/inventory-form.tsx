@@ -111,8 +111,9 @@ export default function InventoryForm({ onClose, onSubmit, initialData, isSubmit
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">库存</label>
                 <input
-                  type="text"
+                  type="number"
                   inputMode="numeric"
+                  min="0"
                   name="quantity"
                   value={formData.quantity}
                   onChange={handleChange}
@@ -124,8 +125,9 @@ export default function InventoryForm({ onClose, onSubmit, initialData, isSubmit
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">单价</label>
                 <input
-                  type="text"
+                  type="number"
                   inputMode="decimal"
+                  min="0"
                   name="price"
                   value={formData.price}
                   onChange={handleChange}

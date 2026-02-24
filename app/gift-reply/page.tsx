@@ -24,18 +24,21 @@ export default function GiftReplyPage() {
   ])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   useEffect(() => {
     fetchGifts()
     fetchInventory()
 
+    // 使用 ref 存函数引用避免 interval 重复创建
     const intervalId = setInterval(() => {
       fetchGifts()
       fetchInventory()
-    }, 30000) // 每30秒刷新一次
+    }, 30000)
 
     return () => clearInterval(intervalId)
-  }, [fetchGifts, fetchInventory])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pendingGifts = gifts.filter((g) => g.status === "待回礼")
   const repliedGifts = gifts.filter((g) => g.status === "已回礼")
@@ -80,14 +83,25 @@ export default function GiftReplyPage() {
   const handleSaveReply = async () => {
     if (isSubmitting || !editingId) return
 
+    // 检查库存是否充足
+    for (const item of replyItems) {
+      if (item.inventory_id) {
+        const inv = inventory.find((i) => i.id === item.inventory_id)
+        if (inv && item.quantity > inv.quantity) {
+          setError(`库存不足：${inv.name} 当前库存 ${inv.quantity} 件，无法使用 ${item.quantity} 件`)
+          return
+        }
+      }
+    }
+
     try {
+      setError(null)
       setIsSubmitting(true)
       await replyToGift(editingId, replyDate, replyItems)
       setEditingId(null)
       setReplyItems([{ item_name: "", category: "其他", quantity: 1, unit_price: 0, inventory_id: undefined }])
-    } catch (error) {
-      console.error("回礼失败:", error)
-      alert("回礼失败，请重试")
+    } catch (err) {
+      setError("回礼失败，请重试")
     } finally {
       setIsSubmitting(false)
     }
@@ -99,17 +113,16 @@ export default function GiftReplyPage() {
   }
 
   const handleCancelReply = async (giftId: string, giftName: string) => {
-    if (!confirm(`确定要取消对"${giftName}"的回礼吗？库存将会恢复。`)) {
-      return
-    }
+    if (!confirm(`确定要取消对"${giftName}"的回礼吗？库存将会恢复。`)) return
 
     setIsCancelling(true)
+    setError(null)
     try {
       await cancelReply(giftId)
-      alert("回礼已取消，库存已恢复")
-    } catch (error) {
-      console.error("[v0] 取消回礼失败:", error)
-      alert("取消回礼失败，请重试")
+      setSuccessMsg("回礼已取消，库存已恢复")
+      setTimeout(() => setSuccessMsg(null), 3000)
+    } catch (err) {
+      setError("取消回礼失败，请重试")
     } finally {
       setIsCancelling(false)
     }
@@ -157,6 +170,18 @@ export default function GiftReplyPage() {
   return (
     <div className="min-h-screen bg-[#FAF7F0] pt-24 pb-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm">
+            {error}
+            <button onClick={() => setError(null)} className="ml-2 text-red-400 hover:text-red-600">✕</button>
+          </div>
+        )}
+        {successMsg && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-2xl text-green-700 text-sm">
+            {successMsg}
+          </div>
+        )}
+
         <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">

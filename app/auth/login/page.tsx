@@ -12,29 +12,17 @@ import { Gift } from "lucide-react"
 
 // 清除所有 Supabase 相关数据的函数
 function clearAllSupabaseData() {
-  // 清除所有 cookie
+  // 清除可访问的 cookie（不带 domain 参数，避免跨域问题）
   const allCookies = document.cookie.split(";")
   allCookies.forEach((cookie) => {
     const cookieName = cookie.split("=")[0].trim()
     if (cookieName) {
       document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-      document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=${window.location.hostname}`
     }
   })
-  
-  // 清除所有 localStorage
-  try {
-    localStorage.clear()
-  } catch (e) {
-    // 忽略错误
-  }
-  
-  // 清除所有 sessionStorage
-  try {
-    sessionStorage.clear()
-  } catch (e) {
-    // 忽略错误
-  }
+
+  try { localStorage.clear() } catch (_) {}
+  try { sessionStorage.clear() } catch (_) {}
 }
 
 export default function LoginPage() {
@@ -170,7 +158,7 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="admin@infist.ai"
+                    placeholder="请输入邮箱"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

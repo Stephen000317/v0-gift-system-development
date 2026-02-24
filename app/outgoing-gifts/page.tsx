@@ -16,6 +16,7 @@ export default function OutgoingGifts() {
   const [photos, setPhotos] = useState<string[]>([])
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const { outgoingGifts, inventory, fetchOutgoingGifts, fetchInventory, addOutgoingGift, updateOutgoingGift, deleteOutgoingGift } =
     useSupabaseStore()
 
@@ -72,29 +73,40 @@ export default function OutgoingGifts() {
     e.preventDefault()
     if (isSubmitting) return
 
+    const validItems = items.map((item) => ({
+      ...item,
+      quantity: Math.max(0, Number(item.quantity) || 0),
+      unit_price: Math.max(0, Number(item.unit_price) || 0),
+    }))
+
+    // 检查库存是否充足
+    for (const item of validItems) {
+      if (item.inventory_id) {
+        const inv = inventory.find((i) => i.id === item.inventory_id)
+        if (inv && item.quantity > inv.quantity) {
+          setFormError(`库存不足：${inv.name} 当前库存 ${inv.quantity} 件，无法送出 ${item.quantity} 件`)
+          return
+        }
+      }
+    }
+
     try {
+      setFormError(null)
       setIsSubmitting(true)
-      
-      const validItems = items.map(item => ({
-        ...item,
-        quantity: typeof item.quantity === "string" ? 0 : item.quantity,
-        unit_price: typeof item.unit_price === "string" ? 0 : item.unit_price,
-      }))
-      
+
       if (editingId) {
         await updateOutgoingGift(editingId, { ...formData, photos }, validItems)
         setEditingId(null)
       } else {
         await addOutgoingGift({ ...formData, photos }, validItems)
       }
-      
+
       setIsFormOpen(false)
       setFormData({ to_person: "", to_company: "", send_date: new Date().toISOString().split("T")[0], notes: "" })
       setItems([{ item_name: "", category: "其他", quantity: "", unit_price: "", inventory_id: undefined }])
       setPhotos([])
-    } catch (error) {
-      console.error("保存主动送礼失败:", error)
-      alert("保存失败，请重试")
+    } catch (err) {
+      setFormError("保存失败，请重试")
     } finally {
       setIsSubmitting(false)
     }
@@ -306,32 +318,34 @@ export default function OutgoingGifts() {
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <input
-                            type="text"
-                            inputMode="decimal"
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
                             required
                             placeholder="数量"
                             value={item.quantity}
                             onChange={(e) => {
-                              const val = e.target.value === "" ? "" : Number(e.target.value)
+                              const val = e.target.value === "" ? "" : Math.max(0, Number(e.target.value))
                               handleItemChange(index, "quantity", val)
                             }}
                             className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
                           />
                           <input
-                            type="text"
+                            type="number"
                             inputMode="decimal"
+                            min="0"
                             required
                             placeholder="单价"
                             value={item.unit_price}
                             onChange={(e) => {
-                              const val = e.target.value === "" ? "" : Number(e.target.value)
+                              const val = e.target.value === "" ? "" : Math.max(0, Number(e.target.value))
                               handleItemChange(index, "unit_price", val)
                             }}
                             className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
                           />
                         </div>
                         <div className="text-right text-sm text-gray-600">
-                          小计: <span className="font-semibold text-blue-500">¥{item.quantity * item.unit_price}</span>
+                          小计: <span className="font-semibold text-blue-500">¥{((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)).toFixed(2)}</span>
                         </div>
                       </div>
                     ))}
@@ -355,6 +369,12 @@ export default function OutgoingGifts() {
                     placeholder="添加备注信息（可选）"
                   />
                 </div>
+
+                {formError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                    {formError}
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-4">
                   <button

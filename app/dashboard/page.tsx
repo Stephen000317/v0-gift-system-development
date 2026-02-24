@@ -41,35 +41,10 @@ export default function Dashboard() {
     const inventoryValue = inventory.reduce((sum, i) => sum + i.quantity * i.price, 0)
 
     const monthlyTrend = (() => {
-      console.log(
-        "[v0] 计算月度趋势 - filteredGifts:",
-        filteredGifts.map((g) => ({
-          id: g.id,
-          received_date: g.received_date,
-          from_person: g.from_person,
-          estimated_value: g.estimated_value,
-        })),
-      )
-      console.log(
-        "[v0] 计算月度趋势 - filteredOutgoing:",
-        filteredOutgoing.map((g) => ({
-          id: g.id,
-          send_date: g.send_date,
-          to_person: g.to_person,
-          total_cost: g.total_cost,
-        })),
-      )
-
       const monthMap: Record<string, { received: number; sent: number; receivedCount: number; sentCount: number }> = {}
 
       filteredGifts.forEach((g) => {
         const month = new Date(g.received_date).toLocaleDateString("zh-CN", { year: "numeric", month: "short" })
-        console.log("[v0] 收礼记录分组:", {
-          gift_id: g.id,
-          from_person: g.from_person,
-          received_date: g.received_date,
-          month,
-        })
         if (!monthMap[month]) monthMap[month] = { received: 0, sent: 0, receivedCount: 0, sentCount: 0 }
         monthMap[month].received += Number.parseFloat(String(g.estimated_value)) || 0
         monthMap[month].receivedCount += 1
@@ -77,13 +52,10 @@ export default function Dashboard() {
 
       filteredOutgoing.forEach((g) => {
         const month = new Date(g.send_date).toLocaleDateString("zh-CN", { year: "numeric", month: "short" })
-        console.log("[v0] 送礼记录分组:", { gift_id: g.id, to_person: g.to_person, send_date: g.send_date, month })
         if (!monthMap[month]) monthMap[month] = { received: 0, sent: 0, receivedCount: 0, sentCount: 0 }
         monthMap[month].sent += g.total_cost
         monthMap[month].sentCount += 1
       })
-
-      console.log("[v0] 月度统计汇总:", monthMap)
 
       return Object.entries(monthMap)
         .sort(([a], [b]) => {

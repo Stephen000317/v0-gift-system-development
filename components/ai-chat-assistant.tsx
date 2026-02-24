@@ -40,35 +40,33 @@ export function AIChatAssistant() {
     setInput("")
     setIsLoading(true)
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
     try {
       const response = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           message: input,
-          conversationHistory: messages.slice(-6), // 只发送最近3轮对话
+          conversationHistory: messages.slice(-6),
         }),
       })
 
       const data = await response.json()
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.response,
-        },
-      ])
+      setMessages((prev) => [...prev, { role: "assistant", content: data.response }])
     } catch (error) {
-      console.error("[v0] 聊天错误:", error)
+      const isTimeout = error instanceof Error && error.name === "AbortError"
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "抱歉，我遇到了一些问题。请稍后再试。",
+          content: isTimeout ? "请求超时，请稍后再试。" : "抱歉，我遇到了一些问题。请稍后再试。",
         },
       ])
     } finally {
+      clearTimeout(timeoutId)
       setIsLoading(false)
     }
   }
@@ -97,7 +95,7 @@ export function AIChatAssistant() {
   return (
     <div
       style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 9999 }}
-      className="w-96 max-h-[90vh] min-h-[400px] bg-[#FAF7F0] rounded-lg shadow-2xl flex flex-col border-2 border-[#D4AF37]/30"
+      className="w-[calc(100vw-48px)] max-w-96 max-h-[90vh] min-h-[400px] bg-[#FAF7F0] rounded-lg shadow-2xl flex flex-col border-2 border-[#D4AF37]/30"
     >
       {/* Header */}
       <div className="bg-gradient-to-r from-[#B8323F] via-[#D32F2F] to-[#8B0000] text-white p-4 rounded-t-lg flex items-center justify-between relative overflow-hidden shrink-0">
