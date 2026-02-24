@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Trash2, Edit, Package, Search } from "lucide-react"
+import { Plus, Trash2, Edit, Package, Search, FlameKindling } from "lucide-react"
 import InventoryForm from "@/components/inventory-form"
 import { useSupabaseStore } from "@/lib/supabase-store"
 
@@ -14,6 +14,10 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState("")
   const [stockFilter, setStockFilter] = useState("all")
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [consumeItem, setConsumeItem] = useState<any>(null)
+  const [consumeQty, setConsumeQty] = useState("")
+  const [consumeNote, setConsumeNote] = useState("")
+  const [isConsuming, setIsConsuming] = useState(false)
 
   useEffect(() => {
     fetchInventory()
@@ -36,6 +40,24 @@ export default function Inventory() {
       console.error("保存库存失败:", error)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleConsume = async () => {
+    if (!consumeItem || isConsuming) return
+    const qty = parseInt(consumeQty)
+    if (isNaN(qty) || qty <= 0) return
+    if (qty > consumeItem.quantity) return
+    try {
+      setIsConsuming(true)
+      await updateInventory(consumeItem.id, { quantity: consumeItem.quantity - qty })
+      setConsumeItem(null)
+      setConsumeQty("")
+      setConsumeNote("")
+    } catch (error) {
+      console.error("内部消耗失败:", error)
+    } finally {
+      setIsConsuming(false)
     }
   }
 
@@ -239,6 +261,13 @@ export default function Inventory() {
                     </div>
                     <div className="flex gap-2 ml-6">
                       <button
+                        onClick={() => { setConsumeItem(item); setConsumeQty(""); setConsumeNote("") }}
+                        title="内部消耗"
+                        className="p-3 hover:bg-orange-50 rounded-2xl transition-all text-gray-400 hover:text-orange-500 border-2 border-transparent hover:border-orange-200"
+                      >
+                        <FlameKindling className="w-5 h-5" />
+                      </button>
+                      <button
                         onClick={() => handleEdit(item)}
                         className="p-3 hover:bg-[#D4AF37]/10 rounded-2xl transition-all text-gray-400 hover:text-[#D4AF37] border-2 border-transparent hover:border-[#D4AF37]/30"
                       >
@@ -255,6 +284,57 @@ export default function Inventory() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {consumeItem && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-200 p-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-1">内部消耗</h2>
+              <p className="text-gray-500 mb-6">
+                {consumeItem.name} · 当前库存：<span className="font-bold text-[#B8323F]">{consumeItem.quantity}</span>
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">消耗数量</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={consumeItem.quantity}
+                    value={consumeQty}
+                    onChange={(e) => setConsumeQty(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-400 transition-colors"
+                    placeholder={`最多 ${consumeItem.quantity}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">备注（可选）</label>
+                  <input
+                    type="text"
+                    value={consumeNote}
+                    onChange={(e) => setConsumeNote(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-400 transition-colors"
+                    placeholder="例如：员工福利、内部活动..."
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => { setConsumeItem(null); setConsumeQty(""); setConsumeNote("") }}
+                  disabled={isConsuming}
+                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleConsume}
+                  disabled={isConsuming || !consumeQty || parseInt(consumeQty) <= 0 || parseInt(consumeQty) > consumeItem.quantity}
+                  className="flex-1 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isConsuming ? "处理中..." : "确认消耗"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
