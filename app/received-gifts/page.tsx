@@ -58,6 +58,7 @@ export default function ReceivedGifts() {
         estimated_value: totalValue,
         received_date: data.date,
         notes: data.notes || "",
+        status: "待回礼" as const,
         photos: data.photos || [],
       }
 
