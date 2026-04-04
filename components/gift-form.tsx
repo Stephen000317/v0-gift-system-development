@@ -27,6 +27,7 @@ export default function GiftForm({ onClose, onSubmit, initialData, isSubmitting 
     company: "",
     date: new Date().toISOString().split("T")[0],
     notes: "",
+    status: "待回礼" as "待回礼" | "已回礼",
   })
 
   const [items, setItems] = useState<ItemRow[]>([{ item_name: "", quantity: 1, unit_price: 0, category: "其他" }])
@@ -39,6 +40,7 @@ export default function GiftForm({ onClose, onSubmit, initialData, isSubmitting 
         company: initialData.from_company || "",
         date: initialData.received_date.split("T")[0],
         notes: initialData.notes || "",
+        status: initialData.status || "待回礼",
       })
       
       // 数据库中字段名是 gift_items，需要转换为表单使用的格式
@@ -139,16 +141,32 @@ export default function GiftForm({ onClose, onSubmit, initialData, isSubmitting 
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">收礼时间</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-400 transition-colors disabled:opacity-50"
-              />
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">收礼时间</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-400 transition-colors disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">回礼状态</label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-400 transition-colors disabled:opacity-50"
+                >
+                  <option value="待回礼">待回礼</option>
+                  <option value="已回礼">已回礼</option>
+                </select>
+              </div>
             </div>
 
             <div className="border-t border-gray-200 pt-6">
